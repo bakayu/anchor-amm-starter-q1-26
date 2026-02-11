@@ -69,6 +69,9 @@ impl<'info> Deposit<'info> {
         max_x: u64,  // Maximum amount of token X that the user is willing to deposit
         max_y: u64,  // Maximum amount of token Y that the user is willing to deposit
     ) -> Result<()> {
+        require!(self.config.locked == false, AmmError::PoolLocked);
+        require!(amount != 0, AmmError::InvalidAmount);
+
         let (x, y) = match self.mint_lp.supply == 0
             && self.vault_x.amount == 0
             && self.vault_y.amount == 0

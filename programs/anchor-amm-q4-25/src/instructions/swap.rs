@@ -33,13 +33,15 @@ pub struct Swap<'info> {
     )]
     pub vault_y: Account<'info, TokenAccount>,
     #[account(
-        mut,
+        init_if_needed,
+        payer = user,
         associated_token::mint = mint_x,
         associated_token::authority = user,
     )]
     pub user_x: Account<'info, TokenAccount>,
     #[account(
-        mut,
+        init_if_needed,
+        payer = user,
         associated_token::mint = mint_y,
         associated_token::authority = user,
     )]
@@ -53,6 +55,7 @@ impl<'info> Swap<'info> {
     pub fn swap(&mut self, is_x: bool, amount: u64, min: u64) -> Result<()> {
         // check if pool is locked
         require!(self.config.locked == false, AmmError::PoolLocked);
+        require!(amount > 0, AmmError::InvalidAmount);
 
         let mut curve = ConstantProduct::init(
             self.vault_x.amount,
@@ -71,6 +74,9 @@ impl<'info> Swap<'info> {
         let res = curve
             .swap(pair, amount, min)
             .map_err(|_| AmmError::SlippageExceeded)?;
+
+        require!(res.deposit != 0, AmmError::InvalidAmount);
+        require!(res.withdraw != 0, AmmError::InvalidAmount);
 
         self.deposit_tokens(is_x, res.deposit)?;
         self.withdraw_tokens(!is_x, res.withdraw)?;
